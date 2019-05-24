@@ -2,7 +2,8 @@
 archival materials related to the London Stage Information Bank, the basis for the London Stage Database<br>
 <br>
 Contents:<br>
-LSP-data: contains files retrieved by Mattie Burkert on 15 September 2014 from 3.5" floppy disks held in the archives of Lawrence University in Appleton, WI, as well as modified version of README file uploaded with these files in 2015 to Minds@UW, the institutional repository of the University of Wisconsin-Madison. Data file extensions are .NPK and .LSP, but they can be opened using a plain text editor.<br>
+LSP-data: contains files retrieved by Mattie Burkert on 15 September 2014 from fourteen 3.5" floppy disks held in the archives of Lawrence University in Appleton, WI, as well as modified version of README file uploaded with these files in 2015 to Minds@UW, the institutional repository of the University of Wisconsin-Madison. Data file extensions are .NPK and .LSP, but they can be opened using a plain text editor.<br>
+disk-images: contains disk images of fourteen 3.5" floppy disks containing LSP-data files, created by Lawrence University archivist Erin Dix in July 2015 using Guymager and transmitted to Mattie Burkert using Dropbox.<br>
 LawrenceU_2014_Advisory Board_1971.pdf: Agenda of and correspondence related to spring 1971 meeting of London Stage Information Bank Advisory Board, retrieved by Mattie Burkert on 15 September 2014 from the Lawrence University Archives.<br>
 LawrenceU_2014_Correspondence_1973-1980.pdf: Miscellaneous correspondence from the London Stage Information Bank project, 1973-1980, retrieved by Mattie Burkert on 15 September 2014 from the Lawrence University Archives.<br>
 LawrenceU_2014_Diagram_c1973.pdf: Hand-drawn diagram of project workflow for the London Stage Information Bank, circa 1973, retrieved by Mattie Burkert on 15 September 2014 from the Lawrence University Archives.<br>
