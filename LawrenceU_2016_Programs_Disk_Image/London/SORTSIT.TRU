@@ -1,0 +1,160 @@
+DIM lin$(55000)                   ! bounds must be numeric constants
+LET old$ = "kdvtra"               ! declare official order
+CLEAR
+LINE INPUT prompt "File? ": f$
+LET if$ = "\w\ls\"&f$&".srt"
+LET of$ = "\w\ls\"&f$&".trs"
+OPEN #1: name if$, org byte
+CLOSE #2
+OPEN #2: name of$, org byte, create newold
+ERASE #2
+Line input prompt "Order? (k[ind], d[ate], v[enue], t[itle], r[ole], a[ctor]) ": new$
+
+DO
+   WHEN error in
+        READ #1, bytes 64000: source$
+   USE
+        LET endflag = 1
+   END WHEN
+   FOR k = 80 to maxnum step 80   ! use separate record counter with step 80
+       LET j = j + 1
+       LET lin$(j) = source$(k-79 : k)
+       CALL reorder (old$, new$)
+       IF k > len(source$) then
+          EXIT FOR
+       END IF
+   NEXT k
+LOOP until endflag = 1
+
+!LET t2$ = time$
+LET source$ = ""
+LET n = j - 1                     ! use n to avoid trouble with j; subtract last blank line
+PRINT n;"records reordered"
+
+CALL quicksorts (lin$(), 1, j)    ! set upper bound to stop sort at last rec 
+PRINT "sort completed"
+
+!reorder to restore original order
+FOR j  = 2 to n
+    ! don't use i here because reorder uses it; start at 2 to skip blank line
+    ! created by previous routine
+    CALL reorder (new$, old$)
+    LET outrec$ = lin$(j)         !& crlf$
+    LET lin$(j) = ""
+    LET o$ = o$ &  outrec$         ! crlf$ on here causes immense delay!
+if len(o$) > 64000 or endflag = 1 then
+    WRITE #2: o$
+
+    !        PRINT outrec$;
+    !        LINE INPUT prompt "":x$
+    LET o$ = ""
+end if
+NEXT j
+
+!   LET t4$ = time$
+LET j = j - 1
+PRINT j;"records reordered"
+
+SUB reorder (old$, new$)
+    LET fp = 1
+    FOR i = 1 to len (old$)       ! get each field according to old order
+        LET char$ = old$(i : i)
+        SELECT CASE char$
+        CASE "k"
+             LET k$ = lin$(j)(fp : fp)      ! pull it out at current field pointer
+             LET fp = fp + 1      ! = 2 advance pointer to next field
+        CASE "d"
+             LET d$ = lin$(j)(fp : fp + 8)
+             LET fp = fp + 9      ! = 11
+        CASE "v"
+             LET v$ = lin$(j)(fp : fp + 7)
+             LET fp = fp + 8      ! = 19
+        CASE "t"
+             LET t$ = lin$(j)(fp : fp + 30)
+             LET fp = fp + 31     ! = 50  
+        CASE "r"
+             LET r$ = lin$(j)(fp : fp + 14)
+             LET fp = fp + 15     ! = 65
+        CASE "a"
+             LET a$ = lin$(j)(fp : fp + 15)
+             LET fp = fp + 16
+        END SELECT
+    NEXT i
+
+    LET lin$(j) = ""              ! plug strings into new order
+    FOR i = 1 to len(new$)
+        LET char$ = new$(i:i)
+        SELECT CASE char$
+        CASE "k"
+             LET lin$(j) = lin$(j) & k$
+        CASE "t"
+             LET lin$(j) = lin$(j) & t$
+        CASE "a"
+             LET lin$(j) = lin$(j) & a$
+        CASE "r"
+             LET lin$(j) = lin$(j) & r$
+        CASE "d"
+             LET lin$(j) = lin$(j) & d$
+        CASE "v"
+             LET lin$(j) = lin$(j) & v$
+        END SELECT
+    NEXT i
+END SUB
+
+END
+
+SUB Quicksorts(arr$(),a,b)        ! brs: a and b are upper and lower bounds
+
+    ! If the segment is 8 elements or fewer, use a straight insertion sort
+    IF b - a < 9 then
+       FOR a1 = a+1 to b
+           LET b1 = a1 - 1
+           IF arr$(b1) > arr$(a1) then
+              LET t$ = arr$(a1)
+              DO
+                 LET arr$(b1+1) = arr$(b1)
+                 LET b1 = b1 - 1
+              LOOP while b1 >= a and arr$(b1) > t$
+              LET arr$(b1+1) = t$
+           END IF
+       NEXT a1
+       EXIT SUB
+    END IF
+
+    ! Find the median of three elements (a, b, (a+b)/2)
+    LET p$ = arr$(a)
+    LET b1$ = arr$(b)
+    LET t$ = arr$((a+b)/2)
+    IF p$ >= b1$ then
+       IF t$ < p$ then
+          IF t$ < b1$ then LET p$=b1$ else LET p$=t$  ! LET p = max(t,b1)
+       END IF
+    ELSE
+       IF t$ > p$ then
+          IF t$<b1$ then LET p$=t$ else LET p$=b1$    ! LET p = min(t,b1)
+       END IF
+    END IF
+
+    ! Partition the arr$ into the elements above & below p
+    LET a1 = a
+    LET b1 = b
+
+    DO
+       DO while arr$(a1) < p$
+          LET a1 = a1 + 1
+       LOOP
+       DO while arr$(b1) > p$
+          LET b1 = b1 - 1
+       LOOP
+       IF a1 >= b1 then EXIT DO
+       LET t$ = arr$(b1)
+       LET arr$(b1) = arr$(a1)
+       LET arr$(a1) = t$
+       LET a1 = a1 + 1
+       LET b1 = b1 - 1
+    LOOP
+
+    ! Sort the two segments recursively
+    CALL quicksorts(arr$,a,b1)
+    CALL quicksorts(arr$,b1+1,b)
+END SUB

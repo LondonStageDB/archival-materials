@@ -1,0 +1,92 @@
+
+GUYMAGER ACQUISITION INFO FILE
+==============================
+
+Guymager
+========
+
+Version              : 0.7.4-1                                                                                   
+Compilation timestamp: 2014-09-11-10.35.59                                                                       
+Compiled with        : gcc 4.7.2                                                                                 
+libewf version       : 20100226                                                                                  
+libguytools version  : 2.0.2                                                                                     
+Host name            : bcadmin                                                                                   
+Domain name          : (none)                                                                                    
+System               : Linux bcadmin 3.16.0-43-generic #58~14.04.1-Ubuntu SMP Mon Jun 22 10:21:20 UTC 2015 x86_64
+
+
+Device information
+==================
+Command executed: bash -c "search="`basename /dev/sdc`: H..t P.......d A..a de.....d" && dmesg | grep -A3 "$search" || echo "No kernel HPA messages for /dev/sdc""
+Information returned:
+----------------------------------------------------------------------------------------------------
+   No kernel HPA messages for /dev/sdc
+
+Command executed: bash -c "smartctl -s on /dev/sdc ; smartctl -a /dev/sdc"
+Information returned:
+----------------------------------------------------------------------------------------------------
+   smartctl 6.2 2013-07-26 r3841 [x86_64-linux-3.16.0-43-generic] (local build)
+   Copyright (C) 2002-13, Bruce Allen, Christian Franke, www.smartmontools.org
+   
+   /dev/sdc: Unknown USB bridge [0x057b:0x0000 (0x401)]
+   Please specify device type with the -d option.
+   
+   Use smartctl -h to get a usage summary
+   
+   smartctl 6.2 2013-07-26 r3841 [x86_64-linux-3.16.0-43-generic] (local build)
+   Copyright (C) 2002-13, Bruce Allen, Christian Franke, www.smartmontools.org
+   
+   /dev/sdc: Unknown USB bridge [0x057b:0x0000 (0x401)]
+   Please specify device type with the -d option.
+   
+   Use smartctl -h to get a usage summary
+
+Command executed: bash -c "hdparm -I /dev/sdc"
+Information returned:
+----------------------------------------------------------------------------------------------------
+   HDIO_DRIVE_CMD(identify) failed: Invalid argument
+   
+   /dev/sdc:
+
+Hidden areas: unknown
+
+
+Acquisition
+===========
+
+Linux device            : /dev/sdc                                                         
+Device size             : 1474560 (1.5MB)                                                  
+Format                  : Linux split dd raw image - file extension is .xxx                
+Image path and file name: /home/bcadmin/Desktop/SampleData/LSP_KEAmacros/LSP_KEAmacros.xxx 
+Info  path and file name: /home/bcadmin/Desktop/SampleData/LSP_KEAmacros/LSP_KEAmacros.info
+Hash calculation        : MD5                                                              
+Source verification     : off                                                              
+Image verification      : on                                                               
+
+No bad sectors encountered during acquisition.
+State: Finished successfully
+
+MD5 hash                   : 47dea3e0d1e2247c69a27eb968ebc259
+MD5 hash verified source   : --                              
+MD5 hash verified image    : 47dea3e0d1e2247c69a27eb968ebc259
+SHA1 hash                  : --                              
+SHA1 hash verified source  : --                              
+SHA1 hash verified image   : --                              
+SHA256 hash                : --                              
+SHA256 hash verified source: --                              
+SHA256 hash verified image : --                              
+Image verification OK. The image contains exactly the data that was written.
+
+Acquisition started : 2016-03-17 15:11:07 (ISO format YYYY-MM-DD HH:MM:SS)   
+Verification started: 2016-03-17 15:12:01                                    
+Ended               : 2016-03-17 15:12:01 (0 hours, 0 minutes and 53 seconds)
+Acquisition speed   : 0.03 MByte/s (0 hours, 0 minutes and 53 seconds)       
+Verification speed  : 1.41 MByte/s (0 hours, 0 minutes and 1 seconds)        
+
+
+Generated image files and their MD5 hashes
+==========================================
+
+No MD5 hashes available (configuration parameter CalcImageFileMD5 is off)
+MD5                               Image file
+n/a                               LSP_KEAmacros.000

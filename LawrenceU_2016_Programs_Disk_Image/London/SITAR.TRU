@@ -1,0 +1,1332 @@
+! As of 18 November 90:  final state of explode version?
+! 8 Jul 96: fixed to show stored pattern; exit from "xs" to pattern with F1.
+!
+!
+!                                 SITAR
+!           Copyright (C) 1987, 1988, 1993, 1996 B. R. Schneider
+
+! for specifications of wild card characters FIND (F3) "sub xchars" 
+LET crlf$ = chr$(13) & chr$(10)   ! use in formatting sitout
+LET sm$  = "etaoinshrdlumywbcfgjkpqvxz"
+LET cap$ = "ETAOINSHRDLUMYWBCFGJKPQVXZ"
+LET num$ = "0123456789"
+LET pnc$ = ",.;':-""""!()?[]/{}<>\`"
+LET spc$ = "$#&@%*_+|~^"
+LET wild$ = "ü˛ö¿û¸ùÎ"
+LET pp$ = "Pattern? "
+LET ps$ = "New set? "
+LET pi$ = "New input directory & file? "
+LET pr$ =  "   Pattern to be replaced? "
+LET py$ = "Your string? "
+LET prp$ = "String to replace it with? "
+LET block = 45000
+LIBRARY "doslib.trc"
+DIM name$(1), size(1), dlm$(1), tlm$(1), att(1)
+CALL params                       ! get setup parameters from disk
+CALL set                          ! make up string of characters for "set" parameter
+
+DO                                ! level 1
+   LET dsk$ = ""                  ! remove output file flag
+   LET er = 0
+   CALL input
+
+   DO while er = 0 and dsk$ <> "y"     ! level 2
+      ! if input file is not found or coming from output,
+      ! keep out of here and loop back to input
+
+      ! start everything at zero
+      LET text$, seg$, lft$, key$, rt$, r$, o$, rep$, prm$ = ""
+      LET skey$, lskey$, rskey$, c$, pat$, dt$, test$ = ""
+      LET lft, rt, hits, hit, lskp, skp, rskp, prm, blk, lm, space, x, a = 0
+      LET lklen, klen, rklen, dots, p, llft, rs, dot1, dot2, ch, sk, txtptr, canc = 0
+      LET m = 121                 ! enable display of hits
+      LET lim = limit
+      IF mode$ = "r" then
+         SET CURSOR 6,1
+         CALL edit (p$, pr$, 27, 6)    ! get search pattern
+         IF x = 315 then EXIT DO  ! F1 cancels search; loop back to input
+         IF p$ = "" then STOP     ! end program
+         CALL parse
+         IF yr$ = chr$(315) then EXIT DO
+         SET CURSOR 7,1
+         CALL edit (r$, prp$, 27, 7)   ! get replacement string
+         IF r$ = "edxx" and lim > 999 then LET lim = 999  ! prevent screen overflow
+      ELSE
+         SET CURSOR 6,1
+         CALL edit (p$, pp$, 9, 6)     ! get normal search pattern
+         IF x = 315 then EXIT DO  ! F1 cancels search; loop back to input
+         IF p$ = "" then STOP     ! 0 len pattern ends program
+         CALL parse
+         IF yr$ = chr$(315) then EXIT DO
+      END IF
+      CLOSE #6
+      OPEN #6: printer
+      IF mode$ = "nd" or mode$ = "nf" then SET #6: MARGIN maxnum
+      CLOSE #2                    ! set up new files only if there is a pattern
+      OPEN #2: name od$ & "$$$.byt", create newold, org byte, access outin
+      ERASE #2
+      RESET #1: begin
+
+      CLEAR
+      PRINT id$;":  [";p$;"]"
+      IF mode$ = "r" then PRINT id$;":  [";r$;"]"
+      call write_params
+
+    DO while m <> 13  and dots < 3  and x <> 315    ! level 3:  do unless canceled or too many dots 
+         IF mode$ = "r" and blk <> 0 then CALL repout      ! get ouput block
+         IF ch > 0 then EXIT DO   ! finish up after chop
+         IF blk = -1 then
+            IF mode$ <> "r" and mode$(2:2) <> "p" then WRITE #2: o$  ! get what's left in sitout
+            CLOSE #2
+            EXIT DO               ! finish searching
+         END IF
+         IF hit = 0 then CALL read
+
+         DO while m <> 13         ! level 4: stop when search is canceled
+            CALL match (text$, key$, skey$, skp, klen, "sit")
+            IF hit = 0 or x = 315 then EXIT DO   ! end of block; loop to next read
+
+            CALL left
+
+            CALL right
+
+            IF mode$ = "r" then
+               CALL replace
+               IF ch > 0 then EXIT DO
+            ELSE
+               CALL sitout
+            END IF
+         LOOP                     ! level 4:  returns to match
+      LOOP                        ! level 3:  returns to read
+
+      IF m <> 13 and dots < 3 then     ! report hit count and call DISK
+         IF m = 110 then CLEAR    ! start new page of display; 110 = "n"
+         SET CURSOR 25,1
+         PRINT str$(hits);" hits in ";id$;
+         IF mode$ = "nf" then
+            PRINT #6:
+            PRINT #6: str$(hits);" hits in ";id$;"                                                               "
+         END IF
+         CALL disk
+         CLEAR
+      END IF
+   LOOP                           ! level 2:  returns to pattern request
+LOOP                              ! level 1:  returns to file input
+
+SUB input
+    IF dots > 2 then EXIT SUB     ! skip to pattern if too many dots
+    CLEAR
+    CLOSE #1
+    PRINT "SITAR:  Copyright (c) 1987, 1996, by B R Schneider, Jr, Lawrence University."
+    PRINT "Limit ";str$(limit);"  Ystrg "; ystrg$; "  Set ";set$;"  Mode ";mode$;"  Infile ";id$;"  Outdir ";od$
+    LET text$ = ""
+    DO
+       SET CURSOR 6, 1
+       PRINT "To change a setting type 1st letter of parameter: ";
+
+       GET KEY x
+       IF x = 13 then EXIT DO
+       IF x = 315 then STOP
+       LET prm$ = chr$(x)
+       LET go = cpos(prm$, "lysmio")
+       IF go = 0 then PRINT "no such parameter"
+       IF go = 1 then
+          CALL setup
+          CALL params
+          LET prm$ = ""
+          LET go = 0
+          CALL input
+          EXIT SUB
+       END IF
+    LOOP
+
+    SET CURSOR 6, 1
+    PRINT "                                                                           "
+
+    WHEN error in
+         OPEN #1: name id$ & file$, access input, org byte
+    USE
+         PRINT extext$
+         STOP
+    END WHEN
+
+    IF mode$(1 : 1) = "x" or mode$(1 : 1) = "s" then
+       DIM pct$(128)
+       DIM pct(128)
+    END IF
+END SUB
+
+SUB edit (pat$, prompt$, coloff, linoff)
+    ! For text less than one page.  Does insert, delete, and backspace.
+    ! Does not do writeover. 
+    PRINT prompt$;
+    LET clfs = coloff             ! catch offsets for lin and col
+    LET lnfs = linoff
+    LET eop = len(pat$)
+    LET tp = eop + 1              ! set the text pointer to current cursor position
+    IF r$ = "edxx" then SET CURSOR 1, 1
+    ! to avoid arbitrary blank line print no more than 1 line at a time
+    LET beg = 1
+    DO
+       PRINT pat$ (beg : beg + 79);
+       LET beg = beg + 80
+    LOOP until beg > eop
+    ASK CURSOR lin, col           ! if bksp is 1st, must have cursor coords 
+
+    DO
+       GET KEY x
+       IF x = 315 then EXIT SUB   ! F1 key cancels search reverts to params
+       CALL xchars(char$,x)       ! translate CTRL chars to chars > 127
+
+       SELECT CASE x
+       CASE 328                   ! cursor up
+            LET tp = tp - 80
+            IF tp < 1 then LET tp = tp + 80
+            IF col < offset then LET tp = 1
+       CASE 336                   ! cursor down
+            LET tp = tp + 80
+            CALL xlate(tp, lin)   ! find column position of cursor
+            CALL xlate(eop, elin)      ! find col position of eop
+            IF tp > eop then
+               IF elin = lin then LET tp = eop + 1    ! fix cursor past eop
+               IF lin > elin then LET tp = tp - 80    ! fix cursor below last line
+            END IF
+       CASE 331                   ! cursor left
+            LET tp = tp - 1
+            IF tp < 1 then LET lin, col, tp = 1  ! stop cursor at 1
+       CASE 333                   ! cursor right
+            LET tp = tp + 1
+            IF tp > eop  then LET tp = eop + 1   ! stop cursor at end of hit
+       CASE 8                     ! backspace/delete
+            LET col = col - 1     ! set back for start of overprint
+            IF col = 0 and tp = 1 then      ! hold cursor at bot
+               LET col = 1
+               LET tp = 1
+            END IF
+            IF col = 0 and tp > 1 then      ! wrap back at bol
+               LET lin = lin -1
+               LET col = 80
+            END IF
+            SET CURSOR lin, col   ! set point where overwrite begins 
+            IF tp > 1 then
+               LET pat$ (tp -1: tp-1) = ""
+               LET tail$ = pat$ (tp-1 : eop)
+               CALL show          ! show revised text
+               LET tp = tp - 1    ! revise pointers
+               LET eop = eop - 1
+            END IF
+       CASE 339                   ! delete char
+            LET pat$ (tp : tp) = ""
+            LET tail$ = pat$(tp : eop)
+            CALL show
+            LET eop = eop - 1
+       CASE 13
+            EXIT SUB              ! exit on sign that editing is done
+       CASE else                  ! insert any other character
+            LET head$ = pat$ (1 : tp-1)     ! split text at action point
+            LET tail$ = pat$ (tp : eop)
+            LET pat$ = head$ & char$ & tail$     ! revise the text
+            LET tail$ = char$ & tail$  ! now revise tail$ for printing
+            CALL show
+            LET tp = tp + 1       ! update the text pointers
+            LET eop = eop + 1
+       END SELECT
+       CALL xlate(tp, lin)
+       SET CURSOR lin, col        ! set cursor at screen coordinates
+    LOOP
+END SUB
+
+SUB debug
+    ASK CURSOR l,c
+    SET CURSOR 22, 1
+    PRINT l,c
+    PRINT lin, col
+    SET CURSOR l,c
+END SUB
+
+SUB xlate(tp, lin)
+    ! xlate text ptr to cursor coordinates or find column of eop
+    LET tp = tp + clfs            ! add offset for cursor placement
+    CALL divide(tp, 80, lin, col)
+    LET lin = lin + lnfs          ! add line offset to get true line number
+    IF col = 0 then               ! correct 0 divide remainder at eol 
+       LET col = 80
+       LET lin = lin - 1
+    END IF
+    LET tp = tp - clfs            ! zero the offset to maintain true text pointer
+END SUB
+
+
+SUB show
+    ! to avoid arbitrary blank line show no more than 1 line at a time
+    LET space = 80 - col + 1      ! find space available for first segment
+    IF x = 8 or x = 339 then LET tail$ = tail$ & " "  ! erase previous end
+    DO                            ! overwrite old text with new
+       PRINT tail$(1 : space);
+       LET tail$(1 : space) = ""
+       LET space = 80
+    LOOP until tail$ = ""
+    IF r$ = "edxx" then
+       SET CURSOR 25,1
+       IF blk = 1 then
+          PRINT "ptr ";txtptr + lft + tp;
+       ELSE
+          PRINT "ptr ";txtptr + lft-lim + tp;
+       END IF
+    END IF
+END SUB
+
+SUB xchars (var$, x)
+    SELECT CASE x
+    CASE 27, 249                  ! convert ESC to ellipsis symbol
+         LET char$ = "˘"
+    CASE 24, 254                  ! CTRL/X (any printable character & space)
+         LET char$ = "˛"
+         LET c$ = sm$ & " " & pnc$ & cap$ & num$ & spc$
+    CASE 21, 154                  ! CTRL/U (any Upper case)
+         LET char$ = "ö"
+         LET c$ = cap$
+    CASE 12, 192                  ! CTRL/L (any Lower case)
+         LET char$ = "¿"
+         LET c$ = sm$
+    CASE 16, 158                  ! CTRL/P (any punctuation)
+         LET char$ = "û"
+         LET c$ = pnc$
+    CASE 14, 252                  ! CTRL/N (any Number)
+         LET char$ = "¸"
+         LET c$ = num$
+    CASE 17, 157                  ! CTRL/Q (any symbol)
+         LET char$ = "ù"
+         LET c$ = spc$
+    CASE 19, 159                  ! CTRL/S ("OR" Set chosen by user)
+         LET char$ = "ü"
+         LET c$ = s$
+    CASE 25                       ! CTRL/Y ("Your string":  chosen by user)
+         LET char$ = ystrg$
+         LET tp = tp + len(ystrg$) - 1
+    CASE 18                       ! CTRL/R (carriage RETURN)
+         LET char$ = chr$(13)     ! enables search for CR symbol
+    CASE 2                        ! CTRL/B (Backspace)
+         LET char$ = chr$(8)      ! enables search for bksp symbol
+    CASE 15, 234
+         LET char$ = "Í"          ! CTRL/O (anything from 0 to 255) 
+         LET c$ = test$(i:i)
+    CASE 4, 235                   ! CTRL/D (enables entry of L S date)
+         LET char$ = "Î"
+         LET test$ = text$(hit+2 : hit+3)
+         IF mode$(1:1) = "n" and test$ => dt$ then LET h = i
+         IF mode$ = "r" and test$ = dt$ then LET h = i
+    CASE else                     ! keep all non-xchars as they are
+         LET char$ = chr$ (x)
+         ! enable use of remaining upper ascii set
+         IF x > 127 then LET c$ = chr$(x)
+    END SELECT
+END SUB
+
+SUB parse
+    FOR i = 1 to len(p$)          !  locate the dots
+        LET char$ = p$(i:i)
+        IF char$ = "˘" then
+           LET dots = dots + 1
+           SELECT CASE dots
+           CASE 1
+                LET dot1 = i
+                IF dot1 = 1 then
+                   LET key$ = p$(dot1 + 1 : maxnum)
+                ELSE
+                   LET key$ = p$(1 : dot1 - 1)
+                   LET rt$ = p$(dot1 + 1 : maxnum)
+                END IF
+           CASE 2
+                LET dot2 = i
+                LET lft$ = p$(1 : dot1 - 1)
+                LET key$ = p$(dot1 + 1 : dot2 - 1)
+                LET rt$ = p$(dot2 + 1 : maxnum)
+           CASE else
+                PRINT "        Too many dots"
+                PAUSE 2
+                EXIT SUB
+           END SELECT
+        END IF
+    NEXT i
+    IF dots = 0 then              ! get lengths of left, key, and right
+       LET key$ = p$
+       LET klen = len(key$)
+    ELSE
+       LET lklen = len(lft$)
+       LET klen = len(key$)
+       LET rklen = len(rt$)
+    END IF
+
+    ! find the longest normal substring and its offset
+    CALL skey (lft$, lklen, lskey$, lskp)
+    CALL skey (key$, klen, skey$, skp)
+    CALL skey (rt$, rklen, rskey$, rskp)
+
+    IF pos(key$, "Î") > 0 then
+       SET CURSOR 12, 1
+       LINE INPUT prompt "Year? ": yr$
+       IF yr$ = chr$(315) then EXIT SUB
+       IF yr$(1:1) = "1" then LET yr$ = yr$(2 : 4)
+       SET CURSOR 12, 14
+       LINE INPUT prompt "Month? ": mon$
+       SET CURSOR 12, 25
+       LINE INPUT prompt "Day? ": day$
+       CALL nikpack(dt$, 1, 1)
+       SET CURSOR 7, 1
+    END IF
+END SUB
+
+SUB skey (key$, klen, skey$, skp)
+    FOR i = 1 to klen + 1         ! find longest normal substring
+        LET char$ = key$(i : i)
+        IF cpos(char$,wild$) = 1 or i = klen + 1 then      ! compare if xchar or end
+           LET this$ = key$(lptr+1 : i-1)
+           IF len(this$) > len(skey$) then
+              LET skey$ = this$   ! save the longer string
+              LET skp = lptr      ! save the last left pointer as offset
+           END IF
+           LET lptr = i           ! reset left pointer
+        END IF
+    NEXT i
+    LET lptr = 0                  ! clear for next skey analysis
+    LET this$ = ""
+END SUB
+
+SUB read
+    READ #1, bytes block : text$
+    ASK #1: RECORD bp             ! get byte pointer (byte recs=bytes read)
+    CALL divide (bp-1, block, blk, rm)      ! calculate block number (blk)
+    IF rm > 0 then LET blk = -1   ! identify last block by the remainder
+    LET hit = 1                   ! prevent exit on hit = 0
+
+    ! add space on bounds of block for lft & rt elements: 
+    !  |<-- for left at begin -->|< --key-- ><-- for right at end-->|
+    ! reserved space = limit set for lft & rt searches
+
+    LET text$ = seg$ & text$      ! add buffer for lft & rt elements
+    LET eot = len (text$)
+    SELECT CASE blk
+    CASE is > 1                   ! any middle block
+         LET begin, llft = lim - klen  ! also set starting place for replace
+    CASE 1                        ! first block
+         LET begin, llft = 1
+    CASE -1                       ! last or only block
+         IF seg$ = "" then LET begin, only = 1   ! no seg if first read
+         ! allow for broken key  (??+??)
+         IF seg$ <> "" then LET begin, llft = lim - klen
+    END SELECT
+    LET seg$ = text$ (eot - (lim + lim) + 1 : eot)    ! make reserved segment 
+END SUB
+
+SUB match(txt$, key$, skey$, skp, klen, or$)
+    DO                            ! look for a match on key
+       IF key input then
+          GET KEY x
+          IF x = 315 then EXIT SUB
+       END IF
+       IF skey$ = "" then         ! handle case with no normal chars in key
+          LET x = ord(key$(1 : 1))     ! find match on first xchar
+          CALL xchars (c$, x)
+          IF or$ = "l" then       ! search back for lft$
+             LET hit = cposr(txt$, c$, begin)
+          ELSE
+             LET hit = cpos(txt$, c$, begin)     ! search forward for key$ or rt$
+          END IF
+       ELSE                       ! find a match to the longest text segment
+          IF or$ = "l" then
+             LET hit = posr (txt$, skey$, begin)
+          ELSE
+             LET hit = pos (txt$, skey$, begin)
+          END IF
+       END IF
+
+       IF or$ = "sit" then LET tru = hit - skp   ! save true beginning
+       IF hit = 0 then EXIT SUB
+       IF len(skey$) = klen then
+          LET test$ = skey$
+          EXIT DO                 ! skip test because no xchars
+       END IF
+
+       LET t1 = hit - skp         ! establish begin and end of hit
+       LET t2 = t1 + klen-1
+       LET test$ = txt$(t1 : t2)
+
+       FOR i = 1 to klen          ! test whole key if match on skey
+           LET char$ = key$(i : i)
+           IF cpos(char$, wild$) = 1 then
+              LET x = ord(char$)
+              CALL xchars (c$, x)
+              IF char$ <> "Î" then LET h = cpos(test$,c$,i)     ! unless date, check for match on xchar 
+              IF h <> i then EXIT FOR  ! abort if test on xchar fails
+           ELSE
+              LET h = pos(test$,char$,i)    ! check for match on text char
+              IF h <> i then EXIT FOR  ! abort if test on regular char fails
+           END IF
+       NEXT i
+
+       IF or$ = "i" then EXIT DO
+       IF or$ = "l" then
+          LET begin = hit - 1     ! search backward
+       ELSE
+          LET begin = hit + 1     ! search forward 
+       END IF
+    LOOP until i = klen + 1       ! if no match loop back for another search 
+
+    IF or$ = "sit" then           ! consolidate hit on main key  
+       IF hit + klen >= eot - lim and blk <> -1 then  ! stop when out of bounds
+          LET hit = 0
+          EXIT SUB
+       END IF
+       LET hit$ = test$
+    END IF
+END SUB
+
+SUB left
+    LET lchop = tru - lim
+    IF lklen = 0 then             ! handle case of no left key
+       IF dots = 2 or dot1 = 1 then
+          LET lft = lchop         ! chop at limit
+       ELSE
+          LET lft = tru
+       END IF
+    ELSE
+       LET begin = tru - 1        ! prevent match on key
+       DO
+          CALL match (text$, lft$, lskey$, lskp, lklen, "l")
+          IF pos(id$, ".npk") > 0 then CALL skipdat("l", hit)   ! see if lft landed in packed date
+       LOOP until fhit = 0
+       LET lft = hit - lskp
+       IF tru - lft > lim then LET lft = lchop   ! chop to limit
+    END IF
+    IF lft < 1 then LET lft = 1   ! adjust for failure at start of file
+END SUB
+
+SUB right
+    LET chop = tru + lim
+    IF rklen = 0 then
+       SELECT CASE dots
+       CASE 0
+            LET rt = tru + klen - 1
+       CASE 1
+            IF dot1 = 1 then LET rt = tru + klen - 1
+            IF dot1 > 1 then LET rt = chop
+       CASE 2
+            LET rt = chop
+       END SELECT
+    ELSE
+       LET begin = tru + klen     ! prevent match on key
+       DO
+          CALL match (text$, rt$, rskey$, rskp, rklen, "r")
+          IF pos(id$, ".npk") > 0 then CALL skipdat("r", hit)   ! see if rt landed in packed date
+       LOOP until fhit = 0
+       IF hit = 0 then            ! if no hit 
+          LET rt = chop           ! chop to limit
+          EXIT SUB
+       ELSE
+          LET rt = hit + rklen-rskp - 1
+          IF rt  > chop then LET rt = chop  ! chop to limit
+       END IF
+    END IF
+END SUB
+
+SUB skipdat(or$, hit)                  ! skip packed date
+    LET fhit = 0
+    LET dtest$ = text$(hit-3 : hit-2)  ! get 2 chars before hit
+    LET fhit = pos(dtest$, "*")   ! search again if test is positive
+    IF fhit = 0 then EXIT SUB
+    IF or$ = "l" then LET begin = hit - 1 else LET begin = hit + 1
+END SUB
+
+SUB sitout
+    IF pos(id$, ".npk") > 0 then
+       CALL skipdat("k", hit)
+       IF fhit > 0 then EXIT SUB
+    END IF
+
+    LET match$ = text$(lft : rt)
+
+    SELECT CASE mode$
+    CASE "x", "xs", "xp", "s", "ss", "sp"
+         IF hit = 0 then EXIT SUB      ! exit at end of file
+         CALL explode
+         LET o$ = o$ & xmatch$
+         IF len(o$) > block then
+            WRITE #2: o$
+            LET o$ = ""
+         END IF
+         IF mode$(2:2) ="s" or mode$(2:2) = "p" then CALL xshow
+         LET xmatch$ = ""
+         LET begin = rt           ! don't hit the same sec again as in sitar
+    CASE "n", "nf", "nx", "nd"    ! if explode switch isn't on do string output. 
+         LET key = tru - lft + 1
+         IF key = lim or lft = 1 then LET xl$ =  "∂"
+         IF chop = rt then LET xr$ = "«"
+         LET hits = hits + 1
+         IF mode$ = "nx" or mode$ = "nf" then  CALL xdat(match$)
+         IF mode$ = "n" or mode$ = "nx" then
+            ! Print elements one by one to allow lighting the key when it arrives.
+            IF m = 121 then       ! if display switch is on
+               LET lmatch$ = xl$ & match$(1 : key-1)
+               CALL screen(lmatch$)
+               LET hilite$ = match$(key : key+klen-1)
+               SET COLOR 15
+               CALL screen(hilite$)
+               LET rmatch$ = match$(key+klen : maxnum) & xr$
+               SET COLOR "white/black"
+               CALL screen(rmatch$)
+               PRINT ""
+               PRINT ""
+               LET xl$, xr$ = ""
+            END IF
+            LET o$ = o$ & match$  !& "∫"    ! collect the hits, bar between each
+            ! avoid "string too long" by putting o$ on disk when it exceeds 
+            ! block length.  System won't handle strings > 64k 
+            IF len(o$) > block then
+               WRITE #2: o$
+               LET o$ = ""
+            END IF
+            LET begin = tru + skp + 1
+         END IF
+
+         IF mode$ = "nf" then
+            CALL format
+            LET begin = rt        ! don't print whole pattern for every hit in it
+         END IF
+
+         IF mode$ = "nd" then
+            IF ystrg$=crlf$&crlf$ then LET match$ = match$(5 : len(match$)-4)
+            IF ystrg$=crlf$ then LET match$ = match$(3 : len(match$)-2)
+            PRINT #6:
+            CALL uline(match$)
+            LET begin = rt        ! don't print whole pattern for every hit in it
+         END IF
+
+    CASE else
+         PRINT
+         PRINT "sitout: mode ";mode$;" not legal"
+         LINE INPUT x$
+         STOP
+    END SELECT
+END SUB
+
+SUB xdat(txseg$)                  ! translate binary date
+    IF pos(id$, "pk", len(id$)-1) = 0 then EXIT SUB   ! get out if normal file
+    LET dt = 0
+    DO                            ! loop through text seg until all dates are xlated
+       LET dt = pos(txseg$, "*", dt+1)
+       IF dt = len(txseg$) or dt = 0 then EXIT SUB    !don't try to date a lone *
+       CALL nikunpack(txseg$, dt+2, dt+3)
+       IF dt < key then LET key = key+len(upd$)-2
+    LOOP
+END SUB
+
+SUB xshow
+    LET recp = 1
+    DO while x <> 315                           ! show exploded sections
+       IF mode$(2:2) = "s" then
+          PRINT xmatch$ (recp : recp+79)
+       ELSE
+          PRINT #6: xmatch$(recp : recp+79)
+       END IF
+       LET recp = recp + 80       ! advance recpointer
+    LOOP while recp < len(xmatch$)     ! (until match$ = "")
+    IF mode$(2:2) = "s" then 
+       PRINT "Next? (y or n) ";
+       GET KEY x
+    END IF
+    IF x = 110 then let x = 315  !F1 key cancels search
+END SUB
+
+SUB screen (match$)
+   DO while m <> 13 and m <> 110 and x <> 315   ! avoid endless loop in here under mysterious conditions
+       DO
+          ASK CURSOR l, c
+          LET space = 1921 - ( l*80 + c)    ! determine lines available
+          LET lm = len(match$)
+          IF lm  > space then     ! handle hits too long for screen
+             LET match1$ = match$ (1 : space)    ! chop match to fit space
+             CALL reset(match1$)
+             LET match$ (1 : space) = ""    ! zero the part printed
+          ELSE                    ! print any string that is going to fit
+             LET match1$ = ""
+             IF mode$ = "r" then
+                IF blk = -1 then
+                   PRINT match$;"∫";" End of file"
+                ELSE
+                   PRINT match$;"∫";" End of block";blk
+                END IF
+                LET match$ = ""
+             ELSE
+                CALL reset(match$)
+             END IF
+          END IF
+
+          ASK CURSOR v,h          ! see if screen is full 
+          IF h > 1 and h < 80 then EXIT DO  ! loop back for unprinted segment
+          IF v > 22 then
+             SET CURSOR 25,1
+             PRINT "More?  (y or n) ";      ! ask for instructions
+             GET KEY m
+             IF m = 110 then
+                CLEAR
+                SET CURSOR 10,30
+                PRINT "Searching . . ."
+             ELSE                 ! start new page for next set of hits
+                CLEAR
+             END IF
+          END IF
+       LOOP until match1$ = ""    ! stop when match$ fits
+       IF match$ = "" then EXIT DO     ! exit after one more loop through
+    LOOP                          ! need outside loop to go back for the final chunk
+END SUB
+
+SUB reset (tx$)
+    ! avoid PRINT's inability to start where it last stopped  
+    ! when next string is too long to fit line.
+    ASK CURSOR y,x
+    SET CURSOR y,x                ! set it at end of last string
+    IF x = 80 and match1$ = "" then LET x = 1
+    PRINT tx$(1 : 81-x);          ! don't print more or it starts on next line
+    LET rem$ = tx$(82-x : maxnum)      ! len(tx$))
+    PRINT rem$;                   ! print the rest as one string starting on next line
+    LET rem$ = ""
+    LET tx$ = ""
+END SUB
+
+SUB format
+    LET lm = len(match$)
+    LET p = 80
+    LET bl, el = 1
+    PRINT #6:
+    DO
+       LET el = cposr(match$, "- ", p)
+       IF p > lm then
+          LET line$ = match$(bl : maxnum)
+          CALL uline(line$)
+          EXIT SUB
+       ELSE
+          LET line$ = match$(bl : el)
+          CALL uline(line$)
+       END IF
+
+       LET p = el + 80
+       LET bl = el + 1
+    LOOP
+END SUB
+
+
+SUB uline (prntx$)
+    DO
+       LET begin = 1
+       CALL match(prntx$, key$, skey$, skp, klen, or$)
+       LET u = hit - skp
+       IF u > 0 then
+          PRINT #6: prntx$(1 : u-1);
+          PRINT #6: chr$(27);chr$(45);chr$(1);hit$;chr$(27);chr$(45);chr$(0);
+          LET prntx$(1 : u+klen-1) = ""
+       ELSE
+          PRINT #6: prntx$
+          EXIT SUB
+       END IF
+    LOOP
+END SUB
+
+SUB replace
+    IF lft < llft then
+       LET lft = llft
+       LET xl$ = "∂"              ! mark if lft overlaps last lft
+    END IF
+    LET hits = hits + 1
+
+    IF cpos(r$,"¸˛") >= 1 then    ! do if replacement has xchars
+       ! compare key and repl str; replace only what's indicated
+       FOR i = 1 to len(r$)
+           LET rchar$ = r$(i:i)   ! get repl char
+           LET hchar$ = hit$ (i:i)     ! get corresp hit char
+           IF rchar$ = "˛" then LET rchar$ = hchar$   !  don't replace 
+           IF rchar$ = "¸" then LET rchar$ = str$(hits)    ! insert hit count
+           LET rr$ = rr$ & rchar$      ! assemble the replacement
+       NEXT i
+
+    ELSE IF r$ = "pkxx" then
+       ! capture date and theatre, having used "*˘ö." as key
+       LET rr$ = text$(lft : rt)
+       IF rr$(2:2) = "p" then     ! extract theatre and pack date
+          LET eod = cpos(rr$, sm$, 3) - 2
+          LET dat$ = rr$(3 : eod)
+          LET th$ = rr$(eod+2 : len(rr$)-1)
+          CALL datx
+          CALL nikpack(rr$, 3, eod+1)
+       ELSE
+          LET rr$(3:3) = pd$ & th$ & rr$(3 : maxnum)
+       END IF
+
+    ELSE IF r$ = "edxx" then      ! if repl = edxx display each hit for editing
+       LET rr$ = text$(lft : rt)
+       CLEAR
+       CALL edit(rr$, "", 0, 1)
+       CLEAR
+       LET ch = pos(rr$,"CHXX")
+       IF ch > 0 then             ! abort the session after chopping off end of file
+          LET text$ = text$(1 : lft + ch)
+          LET blk = -1            ! make it the last block
+          EXIT SUB
+       END IF
+       LET sk = pos(rr$, "SKXX")
+       IF sk > 0 then
+          ! abort the session after skipping beginning of file.  Won't work 
+          ! if file < 1 block
+          IF blk = 1 then         ! don't observe limit: not in force
+             LET text$ = text$(lft+sk+4 : maxnum)
+          ELSE
+             LET text$ = text$((lft+sk - lim): maxnum)     ! observe limit
+          END IF
+          ERASE #2                ! start here from scratch
+          EXIT SUB
+       END IF
+    ELSE
+       LET rr$ = r$               ! if no xchars use replacement as is
+    END IF
+
+    LET text$ (lft : rt) = xl$ & rr$   ! insert the replacement
+    LET llft = lft                ! save Last Left 
+    LET eot = len (text$)         ! find new end of text (for left and right subs)
+    LET begin = lft + len(rr$)    ! don't hit the hit again (means that *...*
+    ! gets every other section so delimited.  Necessary to prevent loop) 
+    LET xl$, xr$, rr$ = ""
+END SUB
+
+SUB repout
+    ! strip protected segments from output
+    SELECT CASE blk
+    CASE 1
+         LET text$ = text$ (1 : eot - lim-1)     ! first
+    CASE is > 1
+         LET text$ = text$ (lim : eot - lim-1)   ! middle
+    CASE -1
+         IF bp > block + 1 then LET text$ = text$ (lim : eot)   ! last
+    END SELECT
+
+    LET o$ = text$                ! save the block before text gets chopped up
+    IF m = 121 and r$ <> "edxx" and r$ <> "pkxx" then CALL screen (text$)      ! display the text
+    WRITE #2: o$
+    LET txtptr = txtptr + len(o$)      ! for use in edxx to tell where we chop
+    LET o$ = ""
+END SUB
+
+SUB DISK
+    CLOSE #2                      ! close $$$.byt
+    LINE INPUT prompt ".  Save output? (y or n) ": dsk$
+    IF dsk$ <> "y" then EXIT SUB
+    DO
+       LINE INPUT prompt "Output file name? ": outfile$
+       IF outfile$ = "" then EXIT SUB
+       IF pos(outfile$, ".") = 0 then
+          PRINT "File must have an extension"    ! will assign "TRU" if no ext
+          PAUSE 1
+       END IF
+    LOOP while pos(outfile$, ".") = 0
+    CALL read_dir (od$&outfile$, name$, size, dlm$, tlm$, att, vol$)
+    WHEN error in                 ! handle "sbscrpt out of bounds" if file not found
+         LET testfile$ = name$(1)
+    USE
+         LET testfile$ = ""
+    END WHEN
+    IF testfile$ > "" then
+       LINE INPUT prompt "File exists: replace it?  (y or n) " : rep$
+       IF rep$ = "" then EXIT SUB
+       IF rep$ <> "y" then        ! use new name
+          LINE INPUT prompt "New file name? ": outfile$
+          IF outfile$ = "" then EXIT SUB
+       ELSE                       ! if ans = yes then override old file
+          UNSAVE od$&outfile$     ! delete existing file
+       END IF
+    END IF
+    CALL rename(od$&"$$$.byt", od$&outfile$)
+END SUB
+
+SUB setup
+    PRINT
+    SELECT CASE prm$
+    CASE "l"
+         LINE INPUT prompt "New limit? ": limit$
+         IF limit$ = "" then EXIT SUB
+         IF len(limit$) > 0 then LET limit = val(limit$)
+    CASE "m"
+         LET f$ = mode$           ! save previous answer
+         LINE INPUT prompt "New mode? (n[ormal], r[eplace], x[plode], s[elect]--s[how], p[rint]) ": mode$
+         IF mode$ = "" then
+            LET mode$ = f$        ! default to previous mode
+            EXIT SUB
+         END IF
+    CASE "o"
+         LINE INPUT prompt "New output directory? ": od$
+         IF od$ = "" then EXIT SUB
+    CASE "i"
+         SET CURSOR 10, 1
+         CALL edit(id$, pi$, 28, 10)
+         IF id$ = "" then EXIT SUB
+    CASE "s"
+         LET set$, s$ = ""
+         SET CURSOR 7, 1
+         CALL edit (set$, ps$, 9, 7)
+         IF set$ = "" then EXIT SUB
+         CALL set
+    CASE "y"
+         LET ystrg$, y$ = ""
+         SET CURSOR 7, 1
+         CALL edit (ystrg$, py$, 13, 7)
+         IF ystrg$ = "" then EXIT SUB
+    CASE else
+         PRINT "No such item"
+         PAUSE 2
+         EXIT SUB
+    END SELECT
+    CALL write_params
+END SUB
+
+SUB write_params
+    OPEN #3: name "sitar.fil", create newold, org record
+    ERASE #3
+    SET #3: RECSIZE 40
+    WRITE #3: limit, ystrg$, set$, mode$, id$, od$, p$, r$
+    CLOSE #3
+END SUB
+
+SUB params
+    WHEN error in                 ! get parameters when called from startup
+         OPEN #3: name "sitar.fil", access input, org record
+    USE
+         PRINT "SITAR.FIL missing.  Belongs on current drive or directory."
+         STOP
+    END WHEN
+    WHEN error in
+         READ #3: limit, ystrg$, set$, mode$, id$, od$, p$, r$
+    USE
+         PRINT extext$
+    END WHEN
+    CLOSE #3
+END SUB
+
+SUB set
+    FOR i = 1 to len(set$)        ! plug lists of characters into any symbols
+        LET char$ = set$(i : i)
+        IF cpos (char$,wild$) = 1 then
+           LET x = ord(char$)
+           CALL xchars (c$, x)
+           LET s$ = s$ & c$
+        ELSE
+           LET s$ = s$ & char$
+        END IF
+    NEXT i
+END SUB
+
+SUB explode
+    ! Given a section, make a record for every role, actor and tagged item, 
+    ! using London Stage syntax, starting with already-compiled binary 
+    ! yr/mon/day and theatre.  Select routine appropriate to section type.
+    ! Then, pull out title, actor, role, keying on LS syntax, skipping free
+    ! text of parens.  As cast items accrue, strip out parens, saving tagged 
+    ! items.  This way items come in order and we have no problem with 
+    ! misleading punc.
+    IF mode$(3:3) = "o" then PRINT match$
+    LET sec$ = match$(2 : maxnum)      ! chop leading * 
+    LET titl$, title$, actor$, role$ = ""
+    LET xx = cposr(sec$, ".)]%")  ! fix end of section
+    LET xx$ = sec$(xx : maxnum)
+    IF xx$ <> ".  *" then LET sec$(xx+1 : maxnum) = ".  *"      ! if not put ".  "
+    LET typ$ = sec$(1 : 1)
+    LET t = 0                     ! zero title flag
+    LET secp, titlp = pos(sec$, " ", 5)     ! set pointers to end of theatre
+    LET dat$ = sec$(2 : 3)
+    CALL nikunpack(dat$, 1,2)
+    LET th$ = sec$(4 : secp-1)
+
+    SELECT CASE typ$
+    CASE "p", "a", "d", "m", "s", "e"
+         CALL pointers
+         CALL cast
+    CASE "c"
+         LET paren$ = sec$
+         CALL index
+    CASE else
+         PRINT #6:
+         PRINT #6: "explode:  type ";"[";typ$;"]";" not legal.  ";dat$;" ";text$(hit-80 : hit);"|";text$(hit : hit + 80)
+    END SELECT
+END SUB
+
+SUB datx
+    LET ld = len(dat$)
+    LET sp = 0
+    FOR i = 1 to ld               ! locate the spaces
+        LET char$ = dat$(i:i)
+        IF char$ = " " then
+           LET sp = sp + 1        ! count the spaces
+           IF sp = 1 then LET sp1 = i else LET sp2 = i     ! get the position
+        END IF
+    NEXT i
+
+    SELECT CASE sp                ! break out year, month, day
+    CASE 0
+         ! if no date, set pointer to theatre position
+         IF ld = 0 then LET secp = 3 else LET day$ = dat$
+    CASE 1
+         LET mon$ = dat$(1 : sp1-1)
+         LET day$ = dat$(sp1+1 :ld)
+    CASE 2
+         LET yr$ = dat$(2 : sp1-1)
+         LET mon$ = dat$(sp1+1 : sp2-1)
+         LET day$ = dat$(sp2+1 : ld)
+    CASE else
+         PRINT "Bad date in ";text$(lft : lft+79)
+         LINE INPUT x$
+    END SELECT
+END SUB
+
+SUB nikpack(strng$, a, b)         ! plug packed date into strng$ from a to b
+    ! use 32-day month because LS months have a zero day as well as 31 possible others
+    LET pd$ = ""
+    WHEN error in
+         LET yr = val(yr$)
+         LET mon = val(mon$)
+         LET day = val(day$)
+    USE
+         PRINT #6: "pack: " & extext$
+         PRINT #6: " ["&yr$&"]"&" ["&mon$&"]"&" ["&day$&"]"
+         PRINT #6: text$(lft:lft+79)
+    END WHEN
+    LET yr = (yr - 659)*384       ! reduce the number and bump up for mon/day
+    LET days = yr + 32*(mon - 1) + day      ! add months and days
+    CALL PACKB(pd$, 1, 16, days)  ! use two bytes for year & day
+    LET strng$(a : b) = pd$
+END SUB
+
+SUB nikunpack(strng$, a, b)       ! plug unpacked date into strng$ from a to b
+    LET upd$ = ""
+    LET pd$ = strng$(a : b)
+    LET days = unpackb(pd$, 1, 16)
+
+    CALL divide(days, (384), yr, monday)
+    LET yr = yr + 659
+    CALL divide(monday, 32, mon, day)
+    LET mon = mon + 1
+
+    LET uyr$ = str$(yr)
+    LET umon$ = str$(mon)
+    LET uday$ = str$(day)
+    LET upd$ = uyr$ & "/" & umon$ & "/" & uday$
+    LET strng$(a : b) = upd$
+END SUB
+
+SUB punc(or$, pnc)
+    ! locate next delimiter, skipping parens 
+    SELECT CASE or$
+    CASE "t"
+         LET pnc1 = cpos(sec$, "[(*", secp)      ! skip any other punc
+    CASE "list"
+         LET pnc1 = cpos(sec$, ",;-[(", secp)    ! skip any other punc
+    CASE "c"
+         LET pnc1 = cpos(sec$, ",;-[(*", secp)
+    CASE ELSE
+         PRINT "punc: case else, what do I do?"
+         LINE INPUT x$
+    END SELECT
+    LET pnc2 = pos(sec$, ".  ", secp)  ! do all this to avoid "." in abbr
+
+    LET q = pnc1 - pnc2
+    SELECT CASE q                 ! find out which comes first
+    CASE is < 0
+         IF pnc1 = 0 then
+            LET pnc = pnc2
+         ELSE
+            LET pnc = pnc1
+         END IF
+    CASE is > 0
+         IF pnc2 = 0 then
+            LET pnc = pnc1
+         ELSE
+            LET pnc = pnc2
+         END IF
+    CASE is = 0                   ! only if both are zero
+         LET pnc = 0
+         EXIT SUB
+    END SELECT
+
+END SUB
+
+SUB pointers                      ! scan each section for key punctuation, skipping parens; 
+    ! store each punc and its pointer in parallel arrays
+    MAT pct = 0
+    MAT pct$ = ""
+    FOR j = 1 to maxnum
+        IF j = 1 and cpos(typ$,"ap") = 0 then
+           LET pct(1) = titlp
+           LET pct$(1) = "π"
+           LET secp = titlp + 1
+        ELSE
+           IF j = 1 and cpos(typ$, "ap") > 0 then
+              CALL punc("t", pct(j))
+           ELSE
+              WHEN error in
+                   CALL punc("c", pct(j))
+              USE
+                   PRINT extext$;sec$
+              END WHEN
+           END IF
+           IF pct(j) = 0 then EXIT FOR
+           LET pct$(j) = sec$(pct(j) : pct(j))   ! find out which it is
+           LET secp = pct(j) + 1
+           IF cpos(pct$(j), "([") > 0 then
+              CALL paren(sec$, pct(j), "sec")    ! reset secp to end of paren
+              LET j = j - 1       ! don't store this delim
+           END IF
+        END IF
+    NEXT j
+END SUB
+
+SUB cast
+    ! using map of pointers to key punc, extract cast items with their parens
+    ! if any, stuck to them, to be stripped off (contents noted) in sub paren 
+    FOR k = 1 to maxnum
+        SELECT CASE pct$(k)
+        CASE "*"                  ! exit at end of section, but capture solitary title
+             IF t = 0 then
+                LET t = 3
+                CALL recout(typ$, titl$, "", "")
+             END IF
+             EXIT SUB
+        CASE "-"
+             LET t = 1
+             IF commas > 0 then
+                LET actor$ = sec$(pct(k)+1 : pct(k+1) - 1)
+                CALL paren(actor$,1,"actor")
+                CALL invert(actor$, "a")
+                CALL list("r")
+                LET k = k + 1     ! get past that pre-captured actor
+             ELSE
+                LET role$ = sec$(pct(k-1)+1 : pct(k) - 1)
+                CALL paren(role$,1,"role")
+             END IF
+        CASE  ".", ";"
+             IF k = 1 and (typ$ = "p" or typ$ = "a") then
+                LET titl$ = sec$(titlp : pct(k)-1)
+                CALL paren(titl$,1,"title")
+                CALL invert(titl$, "t")
+             ELSE
+                IF commas = 0 then
+                   LET actor$ = sec$(pct(k-1)+1 : pct(k) - 1)
+                   CALL paren(actor$,1,"actor")
+                   CALL invert(actor$, "a")
+                   IF actor$ > "" or role$ > "" then
+                      CALL recout(typ$, titl$, role$, actor$)
+                      LET t = 1
+                   END IF
+                   LET role$, actor$ = ""
+                ELSE IF commas > 0 then
+                   CALL list("a")
+                END IF
+             END IF
+        CASE ","
+             LET commas = commas + 1
+        CASE "π"                  ! ignore 1st delim of title-less sec  
+        END SELECT
+    NEXT k
+END SUB
+
+SUB list(or$)
+    LET t = 1                     ! raise title flag 
+    FOR p = k - (commas+1) to maxnum
+        IF p = k then EXIT FOR
+        LET itm$ = sec$(pct(p)+1 : pct(p+1) - 1)
+
+        IF or$ = "a" then
+           LET actor$ = itm$
+           CALL paren(actor$,1,"actor")
+           CALL invert(actor$, "a")
+           CALL recout(typ$, titl$, role$, actor$)
+        ELSE
+           LET role$ = itm$
+           CALL paren(role$,1,"role")
+           CALL backref           ! correct for "As" or "See" reference
+           IF reflg <> 1 then CALL recout(typ$, titl$, role$, actor$)
+           LET reflg = 0
+        END IF
+    NEXT p
+    LET commas = 0
+END SUB
+
+SUB backref
+    IF role$(1 : 3) = "See" or role$(1 : 2) = "As" then
+       LET role$ = role$ & ", but"
+       CALL recout(typ$, titl$, "", role$)
+       LET pct(p+1) = pct(p+1) + 4     ! move past the "but" in the next list item
+       LET reflg = 1              ! stop second record for this item
+    END IF
+END SUB
+
+SUB paren(sec$,pnc,or$)           ! used twice:  1) identify true cast punc 
+    ! in section; 2) clean parens out of cast items
+    DO
+       LET ins, outs, in, out = 0
+       LET brk = pnc-1            ! don't miss delim in 1st position
+
+       FOR i = 1 to 30
+           LET brk = cpos(sec$,"[]%()", brk + 1)      ! get next delim
+           LET brk$ = sec$(brk : brk)
+           IF brk = 0 then EXIT FOR
+           IF brk$ = "[" or brk$ = "(" then
+              LET ins = ins + 1   ! count in-brackets
+              IF i = 1 then LET in = brk    ! save beginning of paren
+           END IF
+           IF brk$ = "]" or brk$ = ")" or brk$ = "%" then
+              LET outs = outs + 1      ! count out-brackets
+              LET out = brk
+              IF ins = outs then EXIT FOR   ! jump out: paren complete
+           END IF
+       NEXT i
+
+       IF ins <> outs then
+          PRINT #6:
+          PRINT #6: "bad paren in ";dat$;" ";match$
+       END IF
+
+       IF or$ = "sec" then
+          LET secp = out + 1      ! move past the paren for what comes next
+          EXIT SUB
+       ELSE                       ! delete paren(s) from cast item 
+          IF out > 0 then         ! process paren if there is one
+             LET paren$ = sec$(in : out)
+             !  PRINT "paren-";"[";paren$;"]";in;out
+             CALL index           ! first capture index entries
+             LET sec$(in : out) = ""   ! delete paren if any 
+          END IF
+          IF brk = 0  then        ! proceed: no more parens in item
+             LET sec$ = trim$(sec$)    ! remove leading & trailing spaces from item
+             DO                   ! remove extra internal spaces 
+                LET insp = pos(sec$, "  ", insp + 1)
+                IF insp > 0 then LET sec$(insp : insp) = ""
+             LOOP while insp > 0
+             LET insp = 0
+             ! PRINT or$;"-";"[";sec$;"]",punc$
+             ! LINE INPUT x$
+          END IF
+       END IF
+    LOOP while brk > 0
+END SUB
+
+SUB index                         ! extract tagged items from parens
+    IF cpos (paren$, "+=$") = 0 then EXIT SUB    ! if no tags, waste no time
+    LET ins, outs, x1, x2 = 0
+    IF typ$ = "c" then            ! get past any delims in packed date
+       LET ndx = secp
+    ELSE                          ! we have a bracket
+       LET ndx = 0
+    END IF
+    DO
+       FOR i = 1 to 30
+           LET ndx = cpos(paren$,"+$=", ndx + 1)      ! get next delim
+           IF ndx = 0 then EXIT DO
+           LET ndx$ = paren$(ndx : ndx)
+           IF ndx$ = "+" or ndx$ = "$" then
+              LET ins = ins + 1   ! count in-tags
+              IF i = 1 then LET x1 = ndx    ! save beginning of item
+              LET xch$ = ndx$
+           END IF
+           IF ndx$ = "=" then
+              LET outs = outs + 1      ! count out-tags
+              LET x2 = ndx
+              IF ins = outs then EXIT FOR   ! jump out: item complete
+              IF ins<> outs then
+                 PRINT #6:
+                 PRINT #6: "Missing index tag in ";typ$;dat$;th$;" ";paren$
+                 EXIT DO
+              END IF
+           END IF
+       NEXT i
+
+       IF xch$ = "$" then
+          LET nam$ = paren$(x1+1 : x2-1)
+          LET begin = 1
+          CALL match(nam$,key$,skey$,skp,klen,"i")
+          ! see if it's the key actor
+          IF hit > 0 then
+             LET frag$ = paren$(x1-15 : x1+30)
+             LET t1 = pos(frag$, nam$)
+             LET t2 = pos(frag$, "=", t1)
+             LET frag$(t1-1 : t2) = "*"
+             CALL invert(nam$,"a")
+             CALL recout("n", frag$, "", nam$)
+          ELSE
+             CALL invert(nam$,"a")
+             CALL recout("n", "", "", nam$)
+          END IF
+       END IF
+
+       IF xch$ = "+" then
+          LET title$ = paren$(x1+1 : x2-1)
+          CALL invert(title$, "t")
+          CALL recout("t",title$, "", "")
+       END IF
+    LOOP
+END SUB
+
+SUB recout(typ$, titl$, role$, actor$)
+    IF mode$ = "s" or mode$ = "ss" or mode$="sp" then
+       LET begin = 1
+       CALL match (actor$,key$,skey$,skp,klen,"rec")  ! test for key actor
+       IF hit = 0 then EXIT SUB   ! proceed only if key actor
+    END IF
+
+    ! make a record for the item
+    LET rec$ = repeat$(" ", 160)  ! make background
+    LET rec$(1 : 1) = typ$        ! plug in fixed fields
+    LET rec$(2 : 10) = dat$
+    LET th$ = th$(1 : 7)
+    LET rec$(11 :  18) = th$
+    LET titl$ = titl$(1 : 30)
+    LET rec$(19 :  49) = titl$
+    LET role$ = role$ (1 : 14)
+    LET rec$(50 :  64) = role$
+    LET rec$(65 :  80) = actor$
+    LET rec$ = rec$(1 : 80)
+    IF t = 3 then
+       LET xmatch$ = rec$ & xmatch$    ! assemble the section's output
+       LET t = 0
+    ELSE
+       LET xmatch$ = xmatch$ & rec$    ! assemble the section's output
+    END IF
+    LET hits = hits + 1
+END SUB
+
+SUB invert(item$, flag$)
+    SELECT CASE flag$
+    CASE "t"
+         LET bit = pos(item$, " ")
+         LET bit$ = item$(1 : bit-1)
+
+         IF bit$ = "The" or bit$ = "A" or bit$ = "An" then
+            LET item$ = item$(bit+1 : maxnum)
+            LET smc = pos(item$, ";")
+            IF smc > 0 then
+               LET item$(smc:smc) = ", " & bit$ & ";"
+            ELSE
+               LET item$ = item$ & ", " & bit$
+            END IF
+         END IF
+    CASE  "a"
+         IF item$(1 : 2) = "As" or item$(1 : 3) = "See" then EXIT SUB
+         LET bit = posr(item$, " ")
+         IF bit = 0 then EXIT SUB
+         LET ebit$ = item$(bit+1 : maxnum)
+         SELECT CASE ebit$
+         CASE "jr", "sr", "Sr", "Jr"
+              EXIT SUB
+         CASE else
+              LET bit$ = item$(1 : bit-1)
+              LET item$ = item$(bit+1 : maxnum) & ", " & bit$
+         END SELECT
+    END SELECT
+END SUB
+
+END
