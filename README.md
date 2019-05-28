@@ -39,3 +39,13 @@ Contents:<br>
 --LawrenceU_2014_Schneider_CV_c1980.pdf: Curriculum Vitae of Professor Ben R. Schneider Jr., including a list of London Stage Information Bank-related publications, circa 1980, retrieved by Mattie Burkert on 15 September 2014 from the Lawrence University Archives.<br>
 <br>
 --LawrenceU_2014_Typist_Instructions_1971.pdf: Instructions for Hong Kong Data Systems typists transcribing marked-up copies of The London Stage 1660-1800 for use on the London Stage Information Bank project, 1971, retrieved by Mattie Burkert on 15 September 2014 from the Lawrence University Archives.<br>
+<br>
+--LawrenceU_2016_Documentation_LSP_SITAR_SORTSIT_1996.pdf: Additional documentation for LSP data files, SITAR word processing program, and sorting program SORTSIT, retrieved by Lawrence University Archivist Erin Dix in March 2016 and transmitted to Mattie Burkert using email.<br>
+<br>
+--LawrenceU_2016_KEA_Manual_1993.jpg: miscellaneous notes written inside a KEAterm User's Guide, believed to be related to London Stage Information Bank software, retrieved by Lawrence University Archivist Erin Dix in March 2016 and transmitted to Mattie Burkert using email.<br>
+<br>
+--LawrenceU_2016_LSP_KEAmacros.000: disk image of floppy disk labeled "London Stage Pgms, KEA macros for handling British Library Files .KTM," retrieved by Lawrence University Archivist Erin Dix in March 2016 and transmitted to Mattie Burkert using email.<br>
+<br>
+--LawrenceU_2016_LSP_KEAmacros.info: disk image of floppy disk labeled "London Stage Pgms, KEA macros for handling British Library Files .KTM," retrieved by Lawrence University Archivist Erin Dix in March 2016 and transmitted to Mattie Burkert using email.<br>
+<br>
+--LawrenceU_2016_Schneider_email_1997.pdf: Image of printed email with subject “bib capture macro” found inside KEAterm User's Guide, retrieved by Lawrence University Archivist Erin Dix in March 2016 and transmitted to Mattie Burkert using email.<br>
