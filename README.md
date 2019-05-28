@@ -11,7 +11,7 @@ Contents:<br>
 <br>
 --LawrenceU_2015_Disk_Images_LSP_data_1990: contains disk images of fourteen 3.5" floppy disks containing LSP-data files, created by Lawrence University archivist Erin Dix in July 2015 using Guymager and transmitted to Mattie Burkert using Dropbox.<br>
 <br>
---LawrenceU_2016_Programs_Disk_Image/London: Contain files extracted from disk image retrieved by Lawrence University Archivist Erin Dix and transmitted to Mattie Burkert on 17 March 2016 (see files LawrenceU_2016_LSP_KEAmacros.info and LawrenceU_2016_LSP_KEAmacros.000, below). Extraction performed by Dorothea Salo at the University of Wisconsin-Madison on or around 23 March 23 2016 using BitCurator. <br>
+--LawrenceU_2016_Programs_Disk_Image/London: contains files extracted from disk image retrieved by Lawrence University Archivist Erin Dix and transmitted to Mattie Burkert on 17 March 2016 (see files LawrenceU_2016_LSP_KEAmacros.info and LawrenceU_2016_LSP_KEAmacros.000, below). Extraction performed by Dorothea Salo at the University of Wisconsin-Madison on or around 23 March 23 2016 using BitCurator. <br>
 <br>
 --Daland_2015_Code_Scans_Combined_Compressed.pdf: Code base, written in PL/1 with limited character set for the London Stage Information Bank project by Will Daland. Transmitted by Daland, page by page, over email to Mattie Burkert in 2015 as individual TIF and PDF files. Combined into a single PDF by Mattie Burkert and compressed to meet GitHub file size limitations. Original scan files available from Burkert on request.<br>
 <br>
