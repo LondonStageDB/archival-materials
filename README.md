@@ -2,6 +2,11 @@
 archival materials related to the London Stage Information Bank, the basis for the London Stage Database<br>
 <br>
 Contents:<br>
+<br>
+--Greene_2018_SITAR_3.5in_floppy: Program files for the SITAR word processing program, retrieved by Mattie Burkert from a 3.5-inch floppy disk sent to her via mail by John Greene, who recieved it from Ben Schneider in or around 1990.<br>
+<br>
+--Greene_2018_SITAR_5.5in_floppy: Program files for the SITAR word processing program, retrieved by Mattie Burkert from a 3.5-inch floppy disk sent to her via mail by John Greene, who recieved it from Ben Schneider in or around 1990.<br>
+<br>
 --LSP-data: contains files retrieved by Mattie Burkert on 15 September 2014 from fourteen 3.5" floppy disks held in the archives of Lawrence University in Appleton, WI, as well as modified version of README file uploaded with these files in 2015 to Minds@UW, the institutional repository of the University of Wisconsin-Madison. Data file extensions are .NPK and .LSP, but they can be opened using a plain text editor.<br>
 <br>
 --LawrenceU_2016_Programs_Disk_Image/London: Contain files extracted from disk image retrieved by Lawrence University Archivist Erin Dix and transmitted to Mattie Burkert on 17 March 2016 (see files LawrenceU_2016_LSP_KEAmacros.info and LawrenceU_2016_LSP_KEAmacros.000, below). Extraction performed by Dorothea Salo at the University of Wisconsin-Madison on or around 23 March 23 2016 using BitCurator. <br>
