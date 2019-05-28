@@ -21,6 +21,8 @@ Contents:<br>
 <br>
 --Daland_2015_Documentation_Scans_Combined_Compressed_3of3.pdf: Pages 38-49 of documentation for the London Stage Information Bank project by Will Daland. Transmitted by Daland, page by page, over email to Mattie Burkert in 2015 as individual PDF files. Combined into a single PDF by Mattie Burkert, compressed, and split into three separate PDFs to meet GitHub file size limitations. Original scan files available from Burkert on request.<br> 
 <br>
+--Greene_2018_Documentation_LSP_SITAR_1990.pdf: Documentation for LSP data and the SITAR word processing program, retrieved by Mattie Burkert in 2018 from a 3.5-inch floppy disk sent to her via mail by John Greene, who recieved it from Ben Schneider in or around 1990.<br> 
+<br>
 --LawrenceU_2014_Advisory Board_1971.pdf: Agenda of and correspondence related to spring 1971 meeting of London Stage Information Bank Advisory Board, retrieved by Mattie Burkert on 15 September 2014 from the Lawrence University Archives.<br>
 <br>
 --LawrenceU_2014_Correspondence_1973-1980.pdf: Miscellaneous correspondence from the London Stage Information Bank project, 1973-1980, retrieved by Mattie Burkert on 15 September 2014 from the Lawrence University Archives.<br>
